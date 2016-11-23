@@ -1,5 +1,6 @@
 # Code designed and written by: Almiqdad Elzein
 # Andrew ID: aelzein
+# file created: November 6th, 2016
 
 # Modification history:
 # Start           Finish
@@ -9,11 +10,19 @@
 # 9/11  8:30pm    9/11   10:20pm
 # 10/11 7:30am    10/11  10:00am
 # 11/11 1:30pm    11/11  5:20pm
-# 12/11 11:20am   12/11  2:30pm
-# 15/11 10:00pm   15/11  10:32pm
+# 12/11 11:20am   12/11  1:30pm
+# 13/11 6:30pm    13/11  9:20pm
+# 15/11 5:20pm    15/11  6:00pm
+# 18/11 8:20am    18/11  11:00am
+# 21/11 7:00am    21/11  9:00am
+# 22/11  7:10pm   22/11  9:30pm
+# 23/11  12:00pm  23/11  3:00pm
+# 23/11  6:00pm   23/11  9:00pm
+
 ###############################################################################
 from ImageWriter import*
 from Tkinter import*
+from ImageTk import*
 ###############################################################################
 
 # define the combinations of blackPixels corresponding to each digit
@@ -27,6 +36,8 @@ six = [0.377,0.576,0.601,0.608]
 seven = [0.800,0.353,0.407,0.353]
 eight = [0.668,0.605,0.666,0.681]
 nine = [0.571,0.600,0.378,0.653]
+D = [0.526,0.615,0.607,0.527]
+
 #define operations
 addition = [0.421,0.346,0.426,0.501]
 subtraction = [0.813,0.875,0.860,0.936]
@@ -151,6 +162,9 @@ def horizontalSegmentation(pic,startcol,endcol):
 #find the index of the largest blob size        
     BiggestBlobSize=max(BlobSizes)         
     index=BlobSizes.index(BiggestBlobSize)
+#if there is more than one blob,return that it's an equal sign
+    if len(BlobSizes) == 2:
+        return 'equal sign'
 #the start and end points of that blob are given by the formula
 #startRow=2*index and EndRow=2*index+1
     return [BlobsStartEnd[2*index],BlobsStartEnd[2*index+1]] 
@@ -329,6 +343,7 @@ def decode(perc):
     differencewithNine = [abs(1.0*perc[0]-nine[0])/4,abs(1.0*perc[1]-nine[1])/4,abs(1.0*perc[2]-nine[2])/4,abs(1.0*perc[3]-nine[3])/4]
     differencewithNine = sum(differencewithNine)
 
+
     differencewithAdd = [abs(1.0*perc[0]-addition[0])/4,abs(1.0*perc[1]-addition[1])/4,abs(1.0*perc[2]-addition[2])/4,abs(1.0*perc[3]-addition[3])/4]
     differencewithAdd = sum(differencewithAdd)
 
@@ -341,12 +356,15 @@ def decode(perc):
     differencewithDiv = [abs(1.0*perc[0]-division[0])/4,abs(1.0*perc[1]-division[1])/4,abs(1.0*perc[2]-division[2])/4,abs(1.0*perc[3]-division[3])/4]
     differencewithDiv = sum(differencewithDiv)
 
+    
+    differencewithD = [abs(1.0*perc[0]-D[0])/4,abs(1.0*perc[1]-D[1])/4,abs(1.0*perc[2]-D[2])/4,abs(1.0*perc[3]-D[3])/4]
+    differencewithD = sum(differencewithD)
+
 #put all differences in a list
-    differences = [differencewithZero,differencewithOne,differencewithTwo,differencewithThree,differencewithFour,differencewithFive,differencewithSix,differencewithSeven,differencewithEight,differencewithNine,differencewithAdd,differencewithSub,differencewithMult,differencewithDiv]
+    differences = [differencewithZero,differencewithOne,differencewithTwo,differencewithThree,differencewithFour,differencewithFive,differencewithSix,differencewithSeven,differencewithEight,differencewithNine,differencewithAdd,differencewithSub,differencewithMult,differencewithDiv,differencewithD]
 
 #find the minimum difference
     minDifference = min(differences)
-
 
 #return the character that most closely represents the input combination of black percentage combination
     if minDifference == differencewithZero:
@@ -379,8 +397,9 @@ def decode(perc):
         return '*'
     if minDifference == differencewithDiv:
         return '/'
-    
-    
+    if minDifference == differencewithD:
+        return 'D'
+
 
 
 
@@ -400,14 +419,18 @@ def getEquationstring(pic):
     while col<width and verticalSegmentation(pic,col)!=None: 
         startcol = verticalSegmentation(pic,col)[0]
         endcol =  verticalSegmentation(pic,col)[1]
-        startRow = horizontalSegmentation(pic,startcol,endcol)[0]
-        endRow = horizontalSegmentation(pic,startcol,endcol)[1]
-        perc = findpercentages(pic,startRow,endRow,startcol,endcol)
-        character = decode(perc)
-        equation = equation+character
+        if horizontalSegmentation(pic,startcol,endcol) == 'equal sign':
+            equation = equation+'='
+        else:
+            startRow = horizontalSegmentation(pic,startcol,endcol)[0]
+            endRow = horizontalSegmentation(pic,startcol,endcol)[1]
+            perc = findpercentages(pic,startRow,endRow,startcol,endcol)
+            character = decode(perc)
+            equation = equation+character
         col = endcol+1
 #return the equation string
     return equation
+
 
 
 #this function takes an string and flips it
@@ -419,12 +442,11 @@ def flip(string):
     for i in range(len(string)):
         flipped = flipped+string[len(string)-1-i]
     return flipped
-
-
+    
 #This function finds the number after a specified index
 def numAfter(index,string):
 #define possible digits
-    digits = ['0','1','2','3','4','5','6','7','8','9']
+    digits = ['0','1','2','3','4','5','6','7','8','9','.','/','*']
 #initialize string to contain the result
     number = ''
 #get the portion of the string am interested in 
@@ -437,14 +459,14 @@ def numAfter(index,string):
 #if you find something that's not a digit, return whatever is in the number
 #string, as an intiger
         else:
-            return int(number)
-    return int(number)
-
-
+            return number
+    return number
+    
+    
 #This function finds the number after a specified index
 def numBefore(index,string):
 #define possible digits
-    digits = ['0','1','2','3','4','5','6','7','8','9']
+    digits = ['0','1','2','3','4','5','6','7','8','9','.','/','*']
 #initialize string to contain the result
     number = ''
 #get the portion of the string am interested in 
@@ -454,53 +476,246 @@ def numBefore(index,string):
 #if you find a digit, add it to number string,fliped
         if subString[len(subString)-i-1] in digits:
             number = number+subString[len(subString)-i-1]
+            
         else:
-            return flip(number)
+            return flip(number) 
     return flip(number)
 
-#returns the index of the operation in a string
-def opindex(string):
-#define possible operations
-    ops = ['-','+','*','/']
-#search through the string for any operation and
-#return that operation
-    for i in range(len(string)):
-        if string[i] in ops:
-            return i
 
+
+#This function takes a string  that's an equation and solves the equation
+def solveEquation(string):
+#define a list of all digits
+    digits = ['0','1','2','3','4','5','6','7','8','9']
+#define a list of the possible operations in the string
+    operations = ['+','-','=']
+#get the index of the equal sign
+    equalIndex = string.index('=')
+#initiate a list of all D-terms
+    Dterms = []
+#initialize a list of all integers
+    integers = []
+#####add each term in the left side of the equation to the appropriate list
+#go through the left side of the equation
+    for i in range(0,equalIndex):
+#if you're at index zero
+        if i == 0:
+#if you have a '-' check what follows it
+            if string[i] == '-':
+#if it's followed by a D, add '-D' to the Dtrems
+                if string[i+1] == 'D':
+                    Dterms.append('-D')
+#if it's followed by a number, check if there is a 'D' after that number
+                elif string[i+1] in digits:
+                    number = string[i+1]+numAfter(i+1,string)
+                    evnumber = str(eval('1.0*'+string[i+1]+numAfter(i+1,string)))
+#if there is, add the term to the Dterms with a '-'
+                    if string[i+1+len(number)] == 'D':
+                        Dterms.append('-'+evnumber+'D')
+#otherwise, add the number to integers
+                    elif string[i+1+len(number)] in operations:
+                        number = string[i+1]+numAfter(i+1,string)
+                        evnumber = str(eval('1.0*'+string[i+1]+numAfter(i+1,string)))
+                        integers.append(evnumber)                
+#if you find a D, add 'D' to Dterms
+            if string[i] == 'D':
+                Dterms.append('D')
+#if you find a Digit check the full number
+            if string[i] in digits:
+                number = string[i]+numAfter(i,string)
+                evnumber = str(eval('1.0*'+string[i]+numAfter(i,string)))
+#if the number is followed by an operation, add the number to integers
+                if string[i+len(number)] in operations:
+                    integers.append('-'+evnumber)
+#if the number is followed by a 'D', add it to Dterms
+                elif string[i+len(number)] == 'D':
+                    Dterms.append(evnumber+'D')
+#if you're are in an index that's not zero
+        else:
+#if you have a plus or minus sign, check if the term after it is an integer or a D-term
+            if string[i] == '+' or string[i] == '-':
+#if there is a 'D', add the D to the Dterms with the appropriete sign
+                if string[i+1] == 'D':
+                    if string[i] == '-':
+                        Dterms.append('-D')
+                    else:
+                        Dterms.append('D')
+#if there is a digit, find the number and check if the number has a 'D' after it or a plus or minus
+                if string[i+1] in digits:
+                    number = string[i+1]+ numAfter(i+1,string)
+                    evnumber = str(eval('1.0*'+string[i+1]+ numAfter(i+1,string)))
+#if there is a 'D' after the number, add the term to the Dterms
+                    if string[i+1+len(number)] == 'D':
+                        if string[i] == '+':
+                            Dterms.append(evnumber+'D')
+                        else:
+                            Dterms.append('-'+evnumber+'D')
+#if there is an operation after the number,add the term to integers
+                    if string[i+1+len(number)] in operations:
+                        if string[i] == '+':
+                            integers.append('-'+evnumber)
+                        else:
+                            integers.append(evnumber)
+#go through the right side of the equation
+    for i in range(equalIndex+1,len(string)):
+#if you're in the last index in the string
+##        if i == (len(string)-1):
+##            if string[i] in digits:
+                
+#if you're at index right after the equal
+        if i == equalIndex+1:
+#if you have a '-' check what follows it
+            if string[i] == '-':
+#if it's followed by a D, add 'D' to the Dtrems
+                if string[i+1] == 'D':
+                    Dterms.append('D')
+#if it's followed by a number, check if there is a 'D' after that number
+                elif string[i+1] in digits:
+                    number = string[i+1]+numAfter(i+1,string)
+                    evnumber = str(eval('1.0*'+string[i+1]+numAfter(i+1,string)))
+#if there is, add the term to the Dterms
+                    if string[i+1+len(number)] == 'D':
+                        Dterms.append(evnumber+'D')
+#otherwise, add the number to integers with a minus sign
+                    elif string[i+1+len(number)] in operations:
+                        number = string[i+1]+numAfter(i+1,string)
+                        evnumber = str(eval('1.0*'+string[i+1]+numAfter(i+1,string)))
+                        integers.append('-'+evnumber)                
+#if you find a D, add '-D' to Dterms
+            if string[i] == 'D':
+                Dterms.append('-D')
+#if you find a Digit check the full number
+            if string[i] in digits:
+                number = string[i]+numAfter(i,string)
+                evnumber = str(eval('1.0*'+string[i]+numAfter(i,string)))
+#if the number is the last number in the string, add it to the integers
+                if i+len(number)>(len(string)-1):
+                    integers.append(str(eval('1.0*'+number)))
+                else:
+#if the number is followed by an operation, add the number to integers
+                    if string[i+len(number)] in operations:
+                        integers.append(evnumber)
+#if the number is followed by a 'D', add it to Dterms
+                    elif string[i+len(number)] == 'D':
+                        Dterms.append('-'+evnumber+'D')
+#if you're are in an index that's not zero
+        else:
+#if you have a plus or minus sign, check if the term after it is an integer or a D-term
+            if string[i] == '+' or string[i] == '-':
+#if there is a 'D', add the D to the Dterms with the appropriete sign
+                if string[i+1] == 'D':
+                    if string[i] == '+':
+                        Dterms.append('-D')
+                    else:
+                        Dterms.append('D')
+#if there is a digit, find the number and check if the number has a 'D' after it or a plus or minus
+                if string[i+1] in digits:
+                    number = string[i+1]+ numAfter(i+1,string)
+                    evnumber = str(eval('1.0*'+string[i+1]+ numAfter(i+1,string)))
+#if the number is the last thing in the string, add it to the integers list
+                    if (i+1+len(number))>(len(string)-1):
+                        if string[i] == '+':
+                            integers.append(evnumber)
+                        else:
+                            integers.append('-'+evnumber)
+                    else:
+                        evnumber = str(eval('1.0*'+string[i+1]+ numAfter(i+1,string)))
+#if there is a 'D' after the number, add the term to the Dterms
+                        if string[i+1+len(number)] == 'D':
+                            if string[i] == '-':
+                                Dterms.append(evnumber+'D')
+                            else:
+                                Dterms.append('-'+evnumber+'D')
+#if there is an operation after the number,add the term to integers
+                        if string[i+1+len(number)] in operations:
+                            if string[i] == '-':
+                                integers.append('-'+evnumber)
+                            else:
+                                integers.append(evnumber)
+    
         
-        
-        
-#this function takes a picture with an equation in it and returns the solution
-#for that equation
-def solve(equationString):
-#define possible operations
-    operations = ['-','+','*','/']
-#get the equation inside the picture
+                                 
+#initiate a sum for the integers and the D coefficients
+    intsum = 0
+    coffsum = 0
+#sum the integers and Dterms' coefficiennts
+    for integer in integers:
+        intsum = intsum+float(integer)
+    for term in Dterms:
+        if len(term[:term.index('D')]) == 0:
+            coffsum = coffsum+1
+        else:
+            number = float(term[:term.index('D')])
+            coffsum = coffsum+number
+#if the sum of coefficients is zero, return 'no solution'
+    if coffsum == 0:
+        return 'No Solution'
+#divide the sum of integers by the sum of Dterms
+    result = 1.0*intsum/coffsum
+#return the result
+    return str(result)
+
+
+def SolvePic(filename):
+    pic = loadPicture(filename)
+    showPicture(pic)
     equation = getEquationstring(pic)
-#get the index of operation
-    operationIndex = opindex(equationString)
-#get the operation
-    operation = equationString[operationIndex] 
-#get the two numbers
-    num1 = int(numBefore(operationIndex,equationString))
-    num2 = int(numAfter(operationIndex,equationString))
-#see possibilities for the operation and execute
-    if operation == '-':
-        return num1-num2
-    if operation == '+':
-        return num1+num2
-    if operation == '*':
-        return num1*num2
-    if operation == '/':
-        return 1.0*num1/num2
-#this function takes an equation as a string and solves it
-def solveEquation(pic):
-#get the equation from the picture
-    equation = getEquationstring(pic)
+    result = solveEquation(equation)
+    return result
+
+
+
+#this function gets the filename of the target picture, solves the equation, and
+#displays it to the user
+def getAndSolve():
+    global filename
+    global resultLabel 
+#get the filename from the filename entry
+    equationFile = filename.get()
+    filename.delete(0,END)
 #solve the equation
-    solution = solve(equation)
-    return solution
+    solution = SolvePic(equationFile)
+#display the solution of the equation
+    resultLabel.configure(text = 'Solution:'+'\n'+'\n'+'\n D ='+'   '+solution) 
+    
+
+
+    
+
+    
+
+
+
+
+##create a user-interface window
+window = Tk()
+window.geometry('660x700')
+window.title('Equation Solver')
+#create a canvas
+c= Canvas(window,width = 660, height = 700,bg='grey')
+c.pack()
+
+
+#creating an entry for the file name
+filename = Entry(window)
+filename.place(x=240,y=200)
+
+
+#create a button that solves the equation for the user
+solveButton = Button(window,text='Solve',font='Verdana 9 bold',fg='black',bg="white",command = getAndSolve)
+solveButton.place(x=390,y=200)
+
+
+#create some labels on the canvas
+welcomeLabel = Label(window,text ='Enter a picture of an arithmatic equation with one unknow here, and it will be solved!,Make'+'\n'+' sure your unknown is " D"\n'+'\n'+'\n'+'enter the file name here:',font='Verdana 9 bold',fg='black',bg="grey")
+welcomeLabel.place(x=0,y=120)
+
+
+#create a label for the result
+resultLabel = Label(window,text ='Solution:'+'\n'+'\n'+'\n D =',font='Verdana 9 bold',fg='black',bg="grey")
+resultLabel.place(x=260,y=230)
+window.mainloop()
+
 
 
 
